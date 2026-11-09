@@ -1,0 +1,17 @@
+{
+  "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
+  "seed": 42,
+  "hyperparameters": {
+    "tfidf_max_features": 1000,
+    "random_forest": "scikit-learn defaults (n_estimators=100)",
+    "mlsmote": false,
+    "train_split": "train"
+  },
+  "threshold": "default (RF majority vote)",
+  "precision": 0.6890450944182999,
+  "recall": 0.4833580577087817,
+  "micro_f1": 0.5681586541413397,
+  "runtime_seconds": 8.284435272216797,
+  "n_train": 5151,
+  "n_test": 1431
+}

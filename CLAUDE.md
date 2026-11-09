@@ -76,7 +76,7 @@ Keep `results/summary.md` updated with one comparison table of all runs.
 - `README.md`: how to install and run everything, plus the GitHub repo link
 - `requirements.txt`: updated whenever a dependency changes
 - All code and files needed to test and run the project
-- Final package: `[GROUP NAME].zip`
+- Final package: `.zip`
 - The report is written separately (4+ pages, venue format, sections:
   Abstract, Introduction, Related Work, Method, Results, Discussion,
   Conclusion and Future Work). Code work should produce the tables and
