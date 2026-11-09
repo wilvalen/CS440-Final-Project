@@ -3,10 +3,10 @@
 A 2-week course assignment based on the NLBSE 2027 Skill Classification tool
 competition. This is for a class, not a competition entry.
 
-- Group name: [GROUP NAME]
-- Due date: [DATE]
+- Group name: Group 9
+- Due date: Nov 27 (Nov 20th goal)
 - Compute: [e.g. "local NVIDIA GPU, 8 GB" or "no GPU, full training runs on Colab"]
-- GitHub repo: [LINK]
+- GitHub repo: https://github.com/wilvalen/CS440-Final-Project
 
 ## Task
 
