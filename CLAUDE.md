@@ -5,7 +5,8 @@ competition. This is for a class, not a competition entry.
 
 - Group name: Group 9
 - Due date: Nov 27 (Nov 20th goal)
-- Compute: [e.g. "local NVIDIA GPU, 8 GB" or "no GPU, full training runs on Colab"]
+- Compute: GPU lab machine for fine-tuning (model/VRAM TBD); CPU machine
+  (20 cores, no GPU) is fine for the baseline and frozen embeddings
 - GitHub repo: https://github.com/wilvalen/CS440-Final-Project
 
 ## Task

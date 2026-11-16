@@ -3,10 +3,14 @@
 import json
 from pathlib import Path
 
+import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
+
+# Candidate decision thresholds for tuning: 0.01, 0.02, ..., 0.99.
+THRESHOLD_GRID = np.round(np.arange(0.01, 1.0, 0.01), 2)
 
 
 def micro_metrics(y_true, y_pred):
@@ -15,6 +19,20 @@ def micro_metrics(y_true, y_pred):
         y_true, y_pred, average="micro", zero_division=0
     )
     return {"precision": float(precision), "recall": float(recall), "micro_f1": float(f1)}
+
+
+def tune_threshold(y_val, val_scores):
+    """Pick the single threshold (shared by all labels) that maximises validation micro-F1.
+
+    Ties go to the lowest threshold. Only ever call this with validation data.
+    Returns (threshold, validation micro-F1).
+    """
+    best_threshold, best_f1 = None, -1.0
+    for threshold in THRESHOLD_GRID:
+        f1 = micro_metrics(y_val, (val_scores >= threshold).astype(int))["micro_f1"]
+        if f1 > best_f1:
+            best_threshold, best_f1 = float(threshold), f1
+    return best_threshold, best_f1
 
 
 def save_result(run_name, result):

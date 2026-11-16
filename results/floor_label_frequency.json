@@ -1,0 +1,16 @@
+{
+  "model": "Label-frequency floor (no text input)",
+  "seed": "n/a (deterministic)",
+  "hyperparameters": {
+    "score": "label frequency in train split"
+  },
+  "runtime_seconds": 1.1380836963653564,
+  "n_train": 5151,
+  "n_val": 572,
+  "n_test": 1431,
+  "threshold": "default (frequency > 0.5)",
+  "predicted_labels": 26,
+  "precision": 0.6896737085416331,
+  "recall": 0.5361358935249995,
+  "micro_f1": 0.6032891720643728
+}

@@ -10,11 +10,14 @@ changes so it fits our evaluation protocol and runs cheaply:
   rows and mixes synthetic rows into the test set.
 
 Trains on the "train" split and reports micro precision/recall/F1 on "test"
-over all 217 labels.
+over all 217 labels, twice:
+
+- default: the Random Forest's own prediction (majority vote of the trees)
+- tuned: one probability threshold for all labels, chosen on the "val" split
 
 Usage:
-  python src/baseline_rf.py              # full run, writes results/baseline_rf.json
-  python src/baseline_rf.py --sample 300 # quick check on 300 train/test rows, no file written
+  python src/baseline_rf.py              # full run, writes results/baseline_rf.json and baseline_rf_tuned.json
+  python src/baseline_rf.py --sample 300 # quick check on 300 train/val/test rows, no files written
 """
 
 import argparse
@@ -23,11 +26,12 @@ import string
 import time
 
 import emoji
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from data import binary_labels, load_split_data
-from evaluate import micro_metrics, save_result
+from evaluate import micro_metrics, save_result, tune_threshold
 
 MAX_FEATURES = 1000
 
@@ -54,36 +58,57 @@ def baseline_text(df):
     return (titles + " " + descriptions).tolist()
 
 
+def positive_probabilities(classifier, x):
+    """Probability of label present, as an (n_rows x n_labels) array.
+
+    For a label with no positive training example the forest only knows
+    class 0, so its probability of being present is 0.
+    """
+    columns = []
+    for classes, proba in zip(classifier.classes_, classifier.predict_proba(x)):
+        has_positive = 1 in classes
+        columns.append(proba[:, list(classes).index(1)] if has_positive else np.zeros(len(x)))
+    return np.column_stack(columns)
+
+
 def main():
     parser = argparse.ArgumentParser(description="TF-IDF + Random Forest baseline")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--sample", type=int, help="use only this many train and test rows")
+    parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 
     start = time.time()
     splits = load_split_data()
-    train, test = splits["train"], splits["test"]
     if args.sample:
-        train = train.sample(n=min(args.sample, len(train)), random_state=args.seed)
-        test = test.sample(n=min(args.sample, len(test)), random_state=args.seed)
-    print(f"Train rows: {len(train)}; test rows: {len(test)}")
+        splits = {name: df.sample(n=min(args.sample, len(df)), random_state=args.seed)
+                  for name, df in splits.items()}
+    train, val, test = splits["train"], splits["val"], splits["test"]
+    print(f"Train rows: {len(train)}; val rows: {len(val)}; test rows: {len(test)}")
 
     tfidf = TfidfVectorizer(max_features=MAX_FEATURES)
     x_train = tfidf.fit_transform(baseline_text(train)).toarray()
+    x_val = tfidf.transform(baseline_text(val)).toarray()
     x_test = tfidf.transform(baseline_text(test)).toarray()
-    y_train, y_test = binary_labels(train), binary_labels(test)
+    y_train, y_val, y_test = binary_labels(train), binary_labels(val), binary_labels(test)
 
     # n_jobs only parallelises tree building; results are identical to n_jobs=None.
     classifier = RandomForestClassifier(random_state=args.seed, n_jobs=-1)
     classifier.fit(x_train, y_train)
-    metrics = micro_metrics(y_test, classifier.predict(x_test))
+    train_seconds = time.time() - start
+
+    default_metrics = micro_metrics(y_test, classifier.predict(x_test))
+    print("default:", default_metrics)
+
+    threshold, val_f1 = tune_threshold(y_val, positive_probabilities(classifier, x_val))
+    test_scores = positive_probabilities(classifier, x_test)
+    tuned_metrics = micro_metrics(y_test, (test_scores >= threshold).astype(int))
     runtime = time.time() - start
-    print(metrics, f"runtime {runtime:.1f}s")
+    print(f"tuned (threshold {threshold}, val micro-F1 {val_f1:.4f}):", tuned_metrics)
+    print(f"runtime {runtime:.1f}s")
 
     if args.sample:
         return
-    save_result("baseline_rf", {
-        "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
+    common = {
         "seed": args.seed,
         "hyperparameters": {
             "tfidf_max_features": MAX_FEATURES,
@@ -91,11 +116,24 @@ def main():
             "mlsmote": False,
             "train_split": "train",
         },
-        "threshold": "default (RF majority vote)",
-        **metrics,
-        "runtime_seconds": runtime,
         "n_train": len(train),
+        "n_val": len(val),
         "n_test": len(test),
+    }
+    save_result("baseline_rf", {
+        "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
+        "threshold": "default (RF majority vote)",
+        **default_metrics,
+        "runtime_seconds": train_seconds,
+        **common,
+    })
+    save_result("baseline_rf_tuned", {
+        "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
+        "threshold": f"tuned on val: {threshold}",
+        **tuned_metrics,
+        "val_micro_f1": val_f1,
+        "runtime_seconds": runtime,
+        **common,
     })
 
 
