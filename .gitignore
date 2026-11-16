@@ -3,3 +3,5 @@ __pycache__/
 data/*.db
 data/*.zip
 data/embeddings/
+results/**/predictions/
+results/predictions/

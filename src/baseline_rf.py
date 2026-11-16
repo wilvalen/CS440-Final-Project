@@ -31,7 +31,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from data import binary_labels, load_split_data
-from evaluate import micro_metrics, save_result, tune_threshold
+from evaluate import micro_metrics, save_result, seed_tag, tune_threshold
 
 MAX_FEATURES = 1000
 
@@ -74,11 +74,13 @@ def positive_probabilities(classifier, x):
 def main():
     parser = argparse.ArgumentParser(description="TF-IDF + Random Forest baseline")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
+                        help="labels as distributed, or with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 
     start = time.time()
-    splits = load_split_data()
+    splits = load_split_data(args.dataset)
     if args.sample:
         splits = {name: df.sample(n=min(args.sample, len(df)), random_state=args.seed)
                   for name, df in splits.items()}
@@ -96,12 +98,14 @@ def main():
     classifier.fit(x_train, y_train)
     train_seconds = time.time() - start
 
-    default_metrics = micro_metrics(y_test, classifier.predict(x_test))
+    default_predictions = classifier.predict(x_test)
+    default_metrics = micro_metrics(y_test, default_predictions)
     print("default:", default_metrics)
 
     threshold, val_f1 = tune_threshold(y_val, positive_probabilities(classifier, x_val))
     test_scores = positive_probabilities(classifier, x_test)
-    tuned_metrics = micro_metrics(y_test, (test_scores >= threshold).astype(int))
+    tuned_predictions = (test_scores >= threshold).astype(int)
+    tuned_metrics = micro_metrics(y_test, tuned_predictions)
     runtime = time.time() - start
     print(f"tuned (threshold {threshold}, val micro-F1 {val_f1:.4f}):", tuned_metrics)
     print(f"runtime {runtime:.1f}s")
@@ -109,6 +113,7 @@ def main():
     if args.sample:
         return
     common = {
+        "dataset": args.dataset,
         "seed": args.seed,
         "hyperparameters": {
             "tfidf_max_features": MAX_FEATURES,
@@ -120,21 +125,22 @@ def main():
         "n_val": len(val),
         "n_test": len(test),
     }
-    save_result("baseline_rf", {
+    tag = seed_tag(args.seed)
+    save_result(f"baseline_rf{tag}", {
         "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
         "threshold": "default (RF majority vote)",
         **default_metrics,
         "runtime_seconds": train_seconds,
         **common,
-    })
-    save_result("baseline_rf_tuned", {
+    }, test_predictions=default_predictions, test_scores=test_scores)
+    save_result(f"baseline_rf{tag}_tuned", {
         "model": "TF-IDF + Random Forest (SkillScope baseline, no MLSMOTE)",
         "threshold": f"tuned on val: {threshold}",
         **tuned_metrics,
         "val_micro_f1": val_f1,
         "runtime_seconds": runtime,
         **common,
-    })
+    }, test_predictions=tuned_predictions, test_scores=test_scores)
 
 
 if __name__ == "__main__":

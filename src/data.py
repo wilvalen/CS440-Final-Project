@@ -1,4 +1,10 @@
-"""Loading the competition table, its inputs, its labels, and our fixed split."""
+"""Loading the competition table, its inputs, its labels, and our fixed split.
+
+Two datasets share the same table layout:
+- "official":  data/skillscope_data.db as distributed by the competition
+- "corrected": data/skillscope_corrected.db, built by src/build_corrected_labels.py
+  (labels recomputed with the PR-to-file join fixed to match on repository)
+"""
 
 import sqlite3
 from pathlib import Path
@@ -8,6 +14,12 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "skillscope_data.db"
 SPLIT_PATH = ROOT / "data" / "split.csv"
+CORRECTED_DB_PATH = ROOT / "data" / "skillscope_corrected.db"
+CORRECTED_SPLIT_PATH = ROOT / "data" / "split_corrected.csv"
+DATASETS = {
+    "official": (DB_PATH, SPLIT_PATH),
+    "corrected": (CORRECTED_DB_PATH, CORRECTED_SPLIT_PATH),
+}
 TABLE = "nlbse_tool_competition_data_by_issue"
 
 # The first 9 columns of the table are metadata / inputs. Everything after
@@ -27,8 +39,9 @@ KEY_COLUMNS = ["Repo Name", "PR #"]
 N_LABELS = 217
 
 
-def load_issues(db_path=DB_PATH):
-    """Return the full competition table as a DataFrame."""
+def load_issues(dataset="official"):
+    """Return the full competition table of one dataset as a DataFrame."""
+    db_path = DATASETS[dataset][0]
     with sqlite3.connect(db_path) as connection:
         df = pd.read_sql_query(f'SELECT * FROM "{TABLE}"', connection)
     if list(df.columns[: len(METADATA_COLUMNS)]) != METADATA_COLUMNS:
@@ -54,10 +67,10 @@ def issue_text(df):
     return (df["issue text"].fillna("") + " " + df["issue description"].fillna("")).tolist()
 
 
-def load_split_data(db_path=DB_PATH, split_path=SPLIT_PATH):
-    """Return {"train": df, "val": df, "test": df} using the saved split file."""
-    df = load_issues(db_path)
-    split = pd.read_csv(split_path)
+def load_split_data(dataset="official"):
+    """Return {"train": df, "val": df, "test": df} using the dataset's saved split file."""
+    df = load_issues(dataset)
+    split = pd.read_csv(DATASETS[dataset][1])
     merged = df.merge(split, on=KEY_COLUMNS, how="inner", validate="one_to_one")
     if len(merged) != len(df):
         raise ValueError("Split file does not cover every issue in the table")

@@ -32,15 +32,39 @@ Hugging Face dataset (checksum is verified):
 python src/download_data.py      # -> data/skillscope_data.db
 ```
 
+### Corrected labels
+
+The official labels are broken. The view that builds them
+(`vw_classification_helper`) joins pull requests to their changed files on
+the PR number only (`a.pullNumber = b.pullNumber`), without matching the
+repository. PR numbers repeat across the 12 repositories, so each issue gets
+the labels of every repository's PR with the same number: all issues sharing
+a PR number have identical label vectors (only 980 distinct vectors for 7,154
+issues), and the labels carry no information about the issue's own text.
+
+`src/build_corrected_labels.py` reruns the official view definitions with one
+added condition, `AND a.repoNum = b.repoNum`, and writes
+`data/skillscope_corrected.db` (same table name and columns; the official
+database is opened read-only). Only PRs with at least one labelled API in
+their own changed files remain: 3,070 issues (kafka has almost no recorded
+files and drops out).
+
+```console
+python src/build_corrected_labels.py   # -> data/skillscope_corrected.db (~15 s)
+```
+
+Every script takes `--dataset official` (default) or `--dataset corrected`.
+
 ## Split
 
 The competition does not provide a train/test split, so we make one:
-a seeded random 80/20 train/test split of the 7,154 issues, with 10% of
-the training portion held out as validation for tuning. The file
-`data/split.csv` is committed. To regenerate it (same output for the same seed):
+a seeded random 80/20 train/test split, with 10% of the training portion
+held out as validation for tuning. The split files are committed. To
+regenerate them (same output for the same seed):
 
 ```console
-python src/make_split.py         # train 5151, val 572, test 1431
+python src/make_split.py                        # data/split.csv: train 5151, val 572, test 1431
+python src/make_split.py --dataset corrected    # data/split_corrected.csv: train 2210, val 246, test 614
 ```
 
 ## Runs
@@ -53,8 +77,12 @@ python src/make_split.py         # train 5151, val 572, test 1431
 | Fine-tuned encoder (general), lr candidates | `python src/finetune.py --model roberta-base --prior-bias-init --lr 2e-5` and `--lr 5e-5` |
 | Fine-tuned encoder (code-aware) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5` |
 | Fine-tuned encoder, text + repo name | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5 --with-repo` |
+| Per-label F1 and AUC against always-predicting each label (after the runs above) | `python src/per_label_analysis.py` (writes to `report/`) |
 
-Each run writes `results/<run>.json` and rebuilds `results/summary.md`.
+Each run writes `results/<run>.json` and rebuilds `results/summary.md`
+(with `--dataset corrected`: `results/corrected/`). Runs with a seed other
+than 42 get a `_seed<N>` suffix, and the summary adds a mean ± standard
+deviation table for runs repeated over seeds.
 Each command reports two runs: the model's default decision rule, and a
 `_tuned` run that uses one probability threshold for all labels, chosen to
 maximise micro-F1 on the validation split (grid 0.01 to 0.99). The test

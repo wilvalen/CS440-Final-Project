@@ -35,7 +35,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 from data import N_LABELS, binary_labels, issue_text, load_split_data
-from evaluate import micro_metrics, save_result, tune_threshold
+from evaluate import micro_metrics, save_result, seed_tag, tune_threshold
 
 
 def set_seeds(seed):
@@ -96,6 +96,8 @@ def main():
     parser.add_argument("--prior-bias-init", action="store_true",
                         help="initialise the output bias to each label's log-odds in the train split")
     parser.add_argument("--with-repo", action="store_true", help="prefix the input text with the repository name")
+    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
+                        help="labels as distributed, or with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 
@@ -105,7 +107,7 @@ def main():
     print(f"Device: {torch.cuda.get_device_name(0) if device.type == 'cuda' else 'cpu'}; bf16: {use_bf16}")
 
     start = time.time()
-    splits = load_split_data()
+    splits = load_split_data(args.dataset)
     if args.sample:
         splits = {name: df.sample(n=min(args.sample, len(df)), random_state=args.seed)
                   for name, df in splits.items()}
@@ -181,20 +183,23 @@ def main():
             break
 
     # Score the two chosen checkpoints on test, once each.
-    test_metrics = {}
+    test_metrics, test_outputs = {}, {}
     for key in ("default", "tuned"):
         model.load_state_dict(best[key]["state"])
         test_scores = predict(model, loaders["test"], device, use_bf16)
-        test_metrics[key] = micro_metrics(y["test"], (test_scores >= best[key]["threshold"]).astype(int))
+        test_predictions = (test_scores >= best[key]["threshold"]).astype(int)
+        test_metrics[key] = micro_metrics(y["test"], test_predictions)
+        test_outputs[key] = {"test_predictions": test_predictions, "test_scores": test_scores}
         print(f"{key} (epoch {best[key]['epoch']}, threshold {best[key]['threshold']}):", test_metrics[key])
     runtime = time.time() - start
     print(f"total {runtime:.0f}s")
 
     if args.sample:
         return
-    slug = args.model.split("/")[-1] + ("_repo" if args.with_repo else "") + f"_lr{args.lr:g}"
+    slug = args.model.split("/")[-1] + ("_repo" if args.with_repo else "") + f"_lr{args.lr:g}" + seed_tag(args.seed)
     common = {
         "model": f"Fine-tuned {args.model}" + (" (text + repo name)" if args.with_repo else ""),
+        "dataset": args.dataset,
         "seed": args.seed,
         "hyperparameters": {
             "pretrained_model": args.model,
@@ -223,11 +228,11 @@ def main():
     save_result(f"ft_{slug}", {
         **common, "threshold": "default (0.5)", "chosen_epoch": best["default"]["epoch"],
         "val_micro_f1": best["default"]["val_f1"], **test_metrics["default"],
-    })
+    }, **test_outputs["default"])
     save_result(f"ft_{slug}_tuned", {
         **common, "threshold": f"tuned on val: {best['tuned']['threshold']}",
         "chosen_epoch": best["tuned"]["epoch"], "val_micro_f1": best["tuned"]["val_f1"], **test_metrics["tuned"],
-    })
+    }, **test_outputs["tuned"])
 
 
 if __name__ == "__main__":

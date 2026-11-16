@@ -46,13 +46,13 @@ def set_seeds(seed):
     torch.manual_seed(seed)
 
 
-def encode_splits(model_name, splits, batch_size, use_cache):
+def encode_splits(model_name, splits, batch_size, use_cache, dataset):
     """Return {split name: embedding array}, reading/writing the cache if use_cache."""
     slug = model_name.split("/")[-1]
     model = None
     embeddings = {}
     for name, df in splits.items():
-        cache = EMBEDDINGS_DIR / f"{slug}_{name}.npy"
+        cache = EMBEDDINGS_DIR / f"{slug}_{dataset}_{name}.npy"
         if use_cache and cache.exists():
             embeddings[name] = np.load(cache)
             print(f"Loaded cached {cache}")
@@ -74,18 +74,20 @@ def main():
     parser.add_argument("--model", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
+                        help="labels as distributed, or with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 
     set_seeds(args.seed)
     start = time.time()
-    splits = load_split_data()
+    splits = load_split_data(args.dataset)
     if args.sample:
         splits = {name: df.sample(n=min(args.sample, len(df)), random_state=args.seed)
                   for name, df in splits.items()}
     print({name: len(df) for name, df in splits.items()})
 
-    embeddings = encode_splits(args.model, splits, args.batch_size, use_cache=not args.sample)
+    embeddings = encode_splits(args.model, splits, args.batch_size, use_cache=not args.sample, dataset=args.dataset)
     encode_seconds = time.time() - start
     y = {name: binary_labels(df) for name, df in splits.items()}
 
@@ -117,9 +119,11 @@ def main():
     # Ties go to the smaller C (first in the grid).
     default_pick = max(candidates, key=lambda r: r["val_f1_at_half"])
     tuned_pick = max(candidates, key=lambda r: r["val_f1_tuned"])
-    default_metrics = micro_metrics(y["test"], (default_pick["test_scores"] >= 0.5).astype(int))
+    default_predictions = (default_pick["test_scores"] >= 0.5).astype(int)
+    default_metrics = micro_metrics(y["test"], default_predictions)
     threshold = tuned_pick["threshold"]
-    tuned_metrics = micro_metrics(y["test"], (tuned_pick["test_scores"] >= threshold).astype(int))
+    tuned_predictions = (tuned_pick["test_scores"] >= threshold).astype(int)
+    tuned_metrics = micro_metrics(y["test"], tuned_predictions)
     runtime = time.time() - start
     print(f"default (C={default_pick['C']}):", default_metrics)
     print(f"tuned (C={tuned_pick['C']}, threshold {threshold}, "
@@ -131,6 +135,7 @@ def main():
     slug = args.model.split("/")[-1]
     common = {
         "model": f"Frozen {slug} embeddings + one-vs-rest logistic regression",
+        "dataset": args.dataset,
         "seed": args.seed,
         "hyperparameters": {
             "embedding_model": args.model,
@@ -150,11 +155,11 @@ def main():
     save_result(f"emb_{slug}_ovr", {
         **common, "threshold": "default (0.5)", "chosen_C": default_pick["C"],
         "val_micro_f1": default_pick["val_f1_at_half"], **default_metrics,
-    })
+    }, test_predictions=default_predictions, test_scores=default_pick["test_scores"])
     save_result(f"emb_{slug}_ovr_tuned", {
         **common, "threshold": f"tuned on val: {threshold}", "chosen_C": tuned_pick["C"],
         "val_micro_f1": tuned_pick["val_f1_tuned"], **tuned_metrics,
-    })
+    }, test_predictions=tuned_predictions, test_scores=tuned_pick["test_scores"])
 
 
 if __name__ == "__main__":
