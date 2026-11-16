@@ -15,12 +15,13 @@ Python 3.11.
 ```console
 python3.11 -m venv .venv
 source .venv/bin/activate
+# PyTorch first, the build for your machine (pick one):
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124   # NVIDIA GPU
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu     # CPU only
 pip install -r requirements.txt
 ```
 
-On a machine without a GPU, first install the CPU build of PyTorch
-(`pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu`),
-then `pip install -r requirements.txt`.
+Fine-tuning was run on an NVIDIA RTX 4000 Ada (20 GB). Everything else runs on CPU.
 
 ## Data
 
@@ -49,6 +50,9 @@ python src/make_split.py         # train 5151, val 572, test 1431
 | Sanity floor: same labels for every issue, by training frequency | `python src/label_frequency_floor.py` |
 | Baseline: TF-IDF + Random Forest | `python src/baseline_rf.py` |
 | Frozen sentence embeddings + one-vs-rest logistic regression | `python src/embeddings_ovr.py` (`--model` picks the encoder; default `all-MiniLM-L6-v2`) |
+| Fine-tuned encoder (general), lr candidates | `python src/finetune.py --model roberta-base --prior-bias-init --lr 2e-5` and `--lr 5e-5` |
+| Fine-tuned encoder (code-aware) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5` |
+| Fine-tuned encoder, text + repo name | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5 --with-repo` |
 
 Each run writes `results/<run>.json` and rebuilds `results/summary.md`.
 Each command reports two runs: the model's default decision rule, and a
@@ -82,5 +86,30 @@ Run both encoders with:
 python src/embeddings_ovr.py                                               # all-MiniLM-L6-v2, ~1 min on CPU
 python src/embeddings_ovr.py --model sentence-transformers/all-mpnet-base-v2  # ~5 min on CPU
 ```
- Embeddings are cached in `data/embeddings/` (not committed);
+
+Embeddings are cached in `data/embeddings/` (not committed);
 deleting the folder forces re-encoding, which gives identical results.
+
+### Fine-tuning notes
+
+`src/finetune.py` adds a 217-output classification head to the encoder
+(sigmoid per label, `BCEWithLogitsLoss`) and trains with AdamW (weight decay
+0.01, 10% linear warmup), batch size 16, max 256 tokens, bf16 autocast, eager
+(deterministic) attention, for up to 10 epochs with early stopping (patience 2)
+on validation micro-F1. The default run keeps the epoch with the best val
+micro-F1 at 0.5; the `_tuned` run keeps the epoch and threshold with the best
+tuned val micro-F1.
+
+`--prior-bias-init` sets the output bias to each label's log-odds in the
+training split, so the model starts at the label-frequency floor. Without it,
+at lr 2e-5 the model spent its whole run learning the label frequencies and
+never got past them (log in `report/ft_roberta_lr2e-5_collapsed.log`).
+
+Learning rate was chosen on validation: roberta-base at 2e-5 and 5e-5, the
+better (2e-5) reused for codebert-base. The `--with-repo` run uses whichever
+of the two models had the higher validation micro-F1 (codebert-base).
+Result files are named `ft_<model>[_repo]_lr<lr>[_tuned].json`.
+
+Runs took 4–11 minutes each on an RTX 4000 Ada shared with another job
+(50–100 s per epoch). Seeds and deterministic CUDA settings are set, so reruns
+on the same GPU and software give the same numbers.

@@ -47,22 +47,22 @@
       },
       {
         "C": 3.0,
-        "val_f1_at_half": 0.5835384523023354,
+        "val_f1_at_half": 0.5833058198517274,
         "threshold": 0.31,
-        "val_f1_tuned": 0.6269673262770363
+        "val_f1_tuned": 0.6269782848730218
       },
       {
         "C": 10.0,
-        "val_f1_at_half": 0.5752821031946884,
-        "threshold": 0.31,
-        "val_f1_tuned": 0.6181324996551882
+        "val_f1_at_half": 0.5748809523809524,
+        "threshold": 0.3,
+        "val_f1_tuned": 0.6176357335386985
       }
     ],
     "logreg_max_iter": 1000,
     "train_split": "train"
   },
-  "runtime_seconds": 314.202739238739,
-  "encode_seconds_this_run": 280.27667927742004,
+  "runtime_seconds": 60.285714864730835,
+  "encode_seconds_this_run": 22.997663974761963,
   "n_train": 5151,
   "n_val": 572,
   "n_test": 1431,

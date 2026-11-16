@@ -2,8 +2,9 @@ emoji==2.12.1
 numpy==1.26.4
 pandas==2.2.3
 scikit-learn==1.5.2
-# PyTorch: on a CPU-only machine install the smaller CPU build first with
-#   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1
+# PyTorch: install the build for your machine first, then this file:
+#   GPU (CUDA 12.4, used for fine-tuning): pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+#   CPU only:                              pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0
 sentence-transformers==3.3.1
 transformers==4.57.6

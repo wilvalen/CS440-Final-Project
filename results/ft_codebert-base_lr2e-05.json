@@ -1,0 +1,82 @@
+{
+  "model": "Fine-tuned microsoft/codebert-base",
+  "seed": 42,
+  "hyperparameters": {
+    "pretrained_model": "microsoft/codebert-base",
+    "lr": 2e-05,
+    "head_lr": 2e-05,
+    "attn_implementation": "eager",
+    "prior_bias_init": true,
+    "batch_size": 16,
+    "max_epochs": 10,
+    "patience": 2,
+    "max_length": 256,
+    "warmup_fraction": 0.1,
+    "weight_decay": 0.01,
+    "with_repo": false,
+    "loss": "BCEWithLogitsLoss",
+    "bf16_autocast": true,
+    "train_split": "train"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.23953129881401705,
+      "val_f1_at_half": 0.6022346368715084,
+      "val_f1_tuned": 0.6370565540604122,
+      "threshold": 0.33,
+      "seconds": 97.54695415496826
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.23905805343448525,
+      "val_f1_at_half": 0.6026093088857546,
+      "val_f1_tuned": 0.6363485712932933,
+      "threshold": 0.32,
+      "seconds": 54.00062894821167
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.23881189058507862,
+      "val_f1_at_half": 0.6105287409284644,
+      "val_f1_tuned": 0.6381519075953798,
+      "threshold": 0.33,
+      "seconds": 51.26675748825073
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.23813407879573723,
+      "val_f1_at_half": 0.5969149826617243,
+      "val_f1_tuned": 0.638532283613495,
+      "threshold": 0.32,
+      "seconds": 51.31037640571594
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.23587847246033222,
+      "val_f1_at_half": 0.5918042151468687,
+      "val_f1_tuned": 0.6383620689655173,
+      "threshold": 0.33,
+      "seconds": 51.30644345283508
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.22972372788997372,
+      "val_f1_at_half": 0.575723251186285,
+      "val_f1_tuned": 0.6355179604939428,
+      "threshold": 0.31,
+      "seconds": 51.24933743476868
+    }
+  ],
+  "runtime_seconds": 367.29007291793823,
+  "device": "NVIDIA RTX 4000 Ada Generation",
+  "n_train": 5151,
+  "n_val": 572,
+  "n_test": 1431,
+  "threshold": "default (0.5)",
+  "chosen_epoch": 3,
+  "val_micro_f1": 0.6105287409284644,
+  "precision": 0.6804878048780488,
+  "recall": 0.5537911869789599,
+  "micro_f1": 0.6106369008535785
+}
