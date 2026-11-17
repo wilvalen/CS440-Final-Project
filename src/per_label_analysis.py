@@ -44,15 +44,23 @@ from evaluate import predictions_dir
 
 REPORT_DIR = ROOT / "report"
 FLOOR = "floor_label_frequency"
-# (result name without the "_tuned" suffix, short name for tables and figures)
-MODELS = [
+# (result name without the "_tuned" suffix, short name for tables and figures).
+# Fine-tuned runs use the learning rate chosen on validation for each dataset.
+COMMON_MODELS = [
     ("baseline_rf", "TF-IDF + RF"),
     ("emb_all-MiniLM-L6-v2_ovr", "MiniLM + LR"),
     ("emb_all-mpnet-base-v2_ovr", "mpnet + LR"),
-    ("ft_roberta-base_lr2e-05", "RoBERTa (ft)"),
-    ("ft_codebert-base_lr2e-05", "CodeBERT (ft)"),
-    ("ft_codebert-base_repo_lr2e-05", "CodeBERT + repo (ft)"),
 ]
+CHOSEN_LR = {"official": "2e-05", "corrected": "5e-05"}
+
+
+def models_for(dataset):
+    lr = CHOSEN_LR[dataset]
+    return COMMON_MODELS + [
+        (f"ft_roberta-base_lr{lr}", "RoBERTa (ft)"),
+        (f"ft_codebert-base_lr{lr}", "CodeBERT (ft)"),
+        (f"ft_codebert-base_repo_lr{lr}", "CodeBERT + repo (ft)"),
+    ]
 FIGURE_MODELS = ["TF-IDF + RF", "mpnet + LR", "CodeBERT (ft)"]
 AUC_SIGNAL = 0.6  # labels with AUC above this are counted as "some signal"
 GAIN_MARGIN = 0.05  # a label counts as a win/loss when F1 differs from "always" by more than this
@@ -102,7 +110,8 @@ def main():
     })
     table["Always"] = per_label_f1(y_test, np.ones_like(y_test))[scored]
     summary = [{"model": "Always predict the label", "seeds": "–", "macro_f1": table["Always"].mean()}]
-    for name, short in [(FLOOR, "Floor")] + MODELS:
+    models = models_for(args.dataset)
+    for name, short in [(FLOOR, "Floor")] + models:
         files = prediction_files(name, args.variant, args.dataset)
         if not files:
             print(f"Skipping {short}: no predictions for {name}")
@@ -126,11 +135,11 @@ def main():
     REPORT_DIR.mkdir(exist_ok=True)
     table = table.sort_values("train_frequency", ascending=False)
     table.to_csv(REPORT_DIR / f"per_label_f1_{name_suffix}.csv", index=False, float_format="%.4f")
-    write_summary(table, summary, name_suffix, n_auc=len(auc_columns))
+    write_summary(table, summary, name_suffix, n_auc=len(auc_columns), models=models)
     plot_gains(table, name_suffix)
 
 
-def write_summary(table, summary, name_suffix, n_auc):
+def write_summary(table, summary, name_suffix, n_auc, models):
     lines = [
         f"# Per-label F1 on test ({name_suffix.replace('_', ' labels, ')} threshold)",
         "",
@@ -151,7 +160,7 @@ def write_summary(table, summary, name_suffix, n_auc):
         lines.append(f"| {row['model']} | {row['seeds']} | {row['macro_f1']:.4f} "
                      f"| {row.get('labels_better', '–')} | {row.get('labels_worse', '–')} "
                      f"| {fmt('max_gain', '+.3f')} | {fmt('mean_auc', '.3f')} | {row.get('labels_auc_signal', '–')} |")
-    for short in [s for _, s in MODELS if f"{s} gain" in table]:
+    for short in [s for _, s in models if f"{s} gain" in table]:
         top = table.nlargest(10, f"{short} gain")
         lines += ["", f"## Largest gains over always-predict: {short}", "",
                   "| label | train frequency | test positives | always F1 | model F1 | gain |",

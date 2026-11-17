@@ -38,6 +38,22 @@ def tune_threshold(y_val, val_scores):
     return best_threshold, best_f1
 
 
+def tune_threshold_min_precision(y_val, val_scores, min_precision):
+    """Pick the threshold with the best validation micro-F1 among those whose
+    validation micro-precision is at least min_precision.
+
+    Ties go to the lowest threshold. Only ever call this with validation data.
+    Returns (threshold, validation micro-F1, validation precision), or
+    (None, -1.0, None) if no threshold reaches min_precision.
+    """
+    best = (None, -1.0, None)
+    for threshold in THRESHOLD_GRID:
+        metrics = micro_metrics(y_val, (val_scores >= threshold).astype(int))
+        if metrics["precision"] >= min_precision and metrics["micro_f1"] > best[1]:
+            best = (float(threshold), metrics["micro_f1"], metrics["precision"])
+    return best
+
+
 def results_dir(dataset):
     """results/ for the official labels, results/corrected/ for the corrected ones."""
     return RESULTS_DIR if dataset == "official" else RESULTS_DIR / dataset

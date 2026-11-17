@@ -1,5 +1,6 @@
 {
   "model": "Fine-tuned microsoft/codebert-base",
+  "dataset": "official",
   "seed": 42,
   "hyperparameters": {
     "pretrained_model": "microsoft/codebert-base",
@@ -25,7 +26,7 @@
       "val_f1_at_half": 0.6022346368715084,
       "val_f1_tuned": 0.6370565540604122,
       "threshold": 0.33,
-      "seconds": 97.54695415496826
+      "seconds": 71.53068614006042
     },
     {
       "epoch": 2,
@@ -33,7 +34,7 @@
       "val_f1_at_half": 0.6026093088857546,
       "val_f1_tuned": 0.6363485712932933,
       "threshold": 0.32,
-      "seconds": 54.00062894821167
+      "seconds": 79.82491612434387
     },
     {
       "epoch": 3,
@@ -41,7 +42,7 @@
       "val_f1_at_half": 0.6105287409284644,
       "val_f1_tuned": 0.6381519075953798,
       "threshold": 0.33,
-      "seconds": 51.26675748825073
+      "seconds": 97.49587678909302
     },
     {
       "epoch": 4,
@@ -49,7 +50,7 @@
       "val_f1_at_half": 0.5969149826617243,
       "val_f1_tuned": 0.638532283613495,
       "threshold": 0.32,
-      "seconds": 51.31037640571594
+      "seconds": 97.33963465690613
     },
     {
       "epoch": 5,
@@ -57,7 +58,7 @@
       "val_f1_at_half": 0.5918042151468687,
       "val_f1_tuned": 0.6383620689655173,
       "threshold": 0.33,
-      "seconds": 51.30644345283508
+      "seconds": 97.3510811328888
     },
     {
       "epoch": 6,
@@ -65,10 +66,10 @@
       "val_f1_at_half": 0.575723251186285,
       "val_f1_tuned": 0.6355179604939428,
       "threshold": 0.31,
-      "seconds": 51.24933743476868
+      "seconds": 97.31328272819519
     }
   ],
-  "runtime_seconds": 367.29007291793823,
+  "runtime_seconds": 562.7419726848602,
   "device": "NVIDIA RTX 4000 Ada Generation",
   "n_train": 5151,
   "n_val": 572,

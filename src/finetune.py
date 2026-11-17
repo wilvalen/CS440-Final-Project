@@ -11,6 +11,9 @@ checkpoints are kept, both chosen on "val" only:
 
 - default: the epoch with the best val micro-F1 at threshold 0.5
 - tuned: the epoch and one threshold for all labels with the best val micro-F1
+- constrained (only with --min-precision P): the epoch and threshold with the
+  best val micro-F1 among thresholds whose val precision is at least P. This
+  checkpoint does not affect early stopping, so the other two are unchanged.
 
 Each is then scored once on "test".
 
@@ -35,7 +38,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 from data import N_LABELS, binary_labels, issue_text, load_split_data
-from evaluate import micro_metrics, save_result, seed_tag, tune_threshold
+from evaluate import micro_metrics, save_result, seed_tag, tune_threshold, tune_threshold_min_precision
 
 
 def set_seeds(seed):
@@ -93,6 +96,8 @@ def main():
     parser.add_argument("--max-length", type=int, default=256)
     parser.add_argument("--warmup-fraction", type=float, default=0.1)
     parser.add_argument("--weight-decay", type=float, default=0.01)
+    parser.add_argument("--min-precision", type=float,
+                        help="also keep a checkpoint and threshold with val precision at least this")
     parser.add_argument("--prior-bias-init", action="store_true",
                         help="initialise the output bias to each label's log-odds in the train split")
     parser.add_argument("--with-repo", action="store_true", help="prefix the input text with the repository name")
@@ -143,7 +148,7 @@ def main():
     scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_fraction * total_steps), total_steps)
     loss_fn = torch.nn.BCEWithLogitsLoss()
 
-    best = {"default": {"val_f1": -1.0}, "tuned": {"val_f1": -1.0}}
+    best = {"default": {"val_f1": -1.0}, "tuned": {"val_f1": -1.0}, "constrained": {"val_f1": -1.0}}
     history = []
     epochs_without_improvement = 0
     for epoch in range(1, args.epochs + 1):
@@ -177,14 +182,28 @@ def main():
                 state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
                 best[key] = {"val_f1": f1, "threshold": thr, "epoch": epoch, "state": state}
                 improved = True
+        if args.min_precision is not None:
+            c_threshold, c_f1, c_precision = tune_threshold_min_precision(y["val"], val_scores, args.min_precision)
+            history[-1].update({"val_f1_constrained": c_f1, "threshold_constrained": c_threshold,
+                                "val_precision_constrained": c_precision})
+            if c_threshold is not None and c_f1 > best["constrained"]["val_f1"]:
+                state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                best["constrained"] = {"val_f1": c_f1, "threshold": c_threshold, "epoch": epoch,
+                                       "val_precision": c_precision, "state": state}
         epochs_without_improvement = 0 if improved else epochs_without_improvement + 1
         if epochs_without_improvement >= args.patience:
             print(f"Stopping early: no val improvement for {args.patience} epochs")
             break
 
-    # Score the two chosen checkpoints on test, once each.
+    # Score the chosen checkpoints on test, once each.
+    keys = ["default", "tuned"]
+    if args.min_precision is not None:
+        if "state" in best["constrained"]:
+            keys.append("constrained")
+        else:
+            print(f"No epoch and threshold reached val precision {args.min_precision}")
     test_metrics, test_outputs = {}, {}
-    for key in ("default", "tuned"):
+    for key in keys:
         model.load_state_dict(best[key]["state"])
         test_scores = predict(model, loaders["test"], device, use_bf16)
         test_predictions = (test_scores >= best[key]["threshold"]).astype(int)
@@ -233,6 +252,14 @@ def main():
         **common, "threshold": f"tuned on val: {best['tuned']['threshold']}",
         "chosen_epoch": best["tuned"]["epoch"], "val_micro_f1": best["tuned"]["val_f1"], **test_metrics["tuned"],
     }, **test_outputs["tuned"])
+    if "constrained" in keys:
+        save_result(f"ft_{slug}_minprec{args.min_precision:g}", {
+            **common,
+            "threshold": f"best val F1 with val precision >= {args.min_precision}: {best['constrained']['threshold']}",
+            "min_precision": args.min_precision, "chosen_epoch": best["constrained"]["epoch"],
+            "val_micro_f1": best["constrained"]["val_f1"], "val_precision": best["constrained"]["val_precision"],
+            **test_metrics["constrained"],
+        }, **test_outputs["constrained"])
 
 
 if __name__ == "__main__":

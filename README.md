@@ -78,6 +78,13 @@ python src/make_split.py --dataset corrected    # data/split_corrected.csv: trai
 | Fine-tuned encoder (code-aware) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5` |
 | Fine-tuned encoder, text + repo name | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5 --with-repo` |
 | Per-label F1 and AUC against always-predicting each label (after the runs above) | `python src/per_label_analysis.py` (writes to `report/`) |
+| Precision-constrained threshold (best val F1 with val precision ≥ 0.75, target fixed in advance as the baseline's default precision 0.726 plus a margin) | `python src/finetune.py --dataset corrected --model microsoft/codebert-base --prior-bias-init --lr 5e-5 --with-repo --min-precision 0.75` |
+| Precision-recall curves on test with each run's operating points | `python src/plot_pr_curves.py --dataset corrected` (and `--dataset official`) |
+
+On the corrected labels, validation chose lr 5e-5 for RoBERTa (over 2e-5) and
+CodeBERT over RoBERTa, so the corrected CodeBERT runs use `--lr 5e-5`:
+`python src/finetune.py --dataset corrected --model microsoft/codebert-base --prior-bias-init --lr 5e-5`
+(add `--with-repo` for the repo row).
 
 Each run writes `results/<run>.json` and rebuilds `results/summary.md`
 (with `--dataset corrected`: `results/corrected/`). Runs with a seed other
