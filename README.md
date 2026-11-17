@@ -32,15 +32,22 @@ Hugging Face dataset (checksum is verified):
 python src/download_data.py      # -> data/skillscope_data.db
 ```
 
-### Corrected labels
+### Repository-matched labels ("corrected" dataset)
 
-The official labels are broken. The view that builds them
-(`vw_classification_helper`) joins pull requests to their changed files on
-the PR number only (`a.pullNumber = b.pullNumber`), without matching the
-repository. PR numbers repeat across the 12 repositories, so each issue gets
-the labels of every repository's PR with the same number: all issues sharing
-a PR number have identical label vectors (only 980 distinct vectors for 7,154
-issues), and the labels carry no information about the issue's own text.
+We found an issue in how the official labels are generated. The view that
+builds them (`vw_classification_helper`) joins pull requests to their changed
+files on the PR number only (`a.pullNumber = b.pullNumber`), without matching
+the repository. PR numbers repeat across the 12 repositories, so each issue
+receives the changed files, and therefore the labels, of every repository's
+PR with the same number. As a result, all issues sharing a PR number have
+identical label vectors (980 distinct vectors for 7,154 issues), and the
+labels do not depend on the issue's own content.
+
+We checked this in several ways: rebuilding the labels from the raw tables
+without the repository match reproduces the official label counts exactly for
+all 7,154 issues; every changed-file row's commit belongs to a PR in its own
+repository; and GitHub's record of the PRs agrees with the per-repository
+files in the database.
 
 `src/build_corrected_labels.py` reruns the official view definitions with one
 added condition, `AND a.repoNum = b.repoNum`, and writes
@@ -48,6 +55,11 @@ added condition, `AND a.repoNum = b.repoNum`, and writes
 database is opened read-only). Only PRs with at least one labelled API in
 their own changed files remain: 3,070 issues (kafka has almost no recorded
 files and drops out).
+
+A smaller, separate issue is left unchanged in both datasets: the view's
+"Operating System" columns test `d.domain = 'Operating System)'` (with a
+trailing parenthesis), so those 7 labels are always 0 even though 73 APIs
+have the domain "Operating System".
 
 ```console
 python src/build_corrected_labels.py   # -> data/skillscope_corrected.db (~15 s)

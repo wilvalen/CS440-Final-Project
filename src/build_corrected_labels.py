@@ -1,4 +1,4 @@
-"""Rebuild the competition table with the repository join fixed.
+"""Rebuild the competition table with pull requests matched to files by repository.
 
 The official view vw_classification_helper, which produces the labels of
 nlbse_tool_competition_data_by_issue, joins pull requests to their changed
@@ -25,8 +25,8 @@ import pandas as pd
 
 from data import CORRECTED_DB_PATH, DB_PATH, TABLE, label_columns
 
-BUGGY_JOIN = "a.pullNumber = b.pullNumber"
-FIXED_JOIN = "a.pullNumber = b.pullNumber\n  AND a.repoNum = b.repoNum"
+REPO_BLIND_JOIN = "a.pullNumber = b.pullNumber"
+REPO_MATCHED_JOIN = "a.pullNumber = b.pullNumber\n  AND a.repoNum = b.repoNum"
 
 
 def view_sql(connection, name):
@@ -37,10 +37,10 @@ def main():
     connection = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
 
     helper = view_sql(connection, "vw_classification_helper")
-    if helper.count(BUGGY_JOIN) != 1:
+    if helper.count(REPO_BLIND_JOIN) != 1:
         raise ValueError("Unexpected vw_classification_helper definition")
     helper = helper.replace("CREATE VIEW vw_classification_helper", "CREATE TEMP VIEW corrected_helper", 1)
-    helper = helper.replace(BUGGY_JOIN, FIXED_JOIN)
+    helper = helper.replace(REPO_BLIND_JOIN, REPO_MATCHED_JOIN)
 
     by_issue = view_sql(connection, "vw_nlbse_tool_competition_data_by_issue")
     by_issue = by_issue.replace(
