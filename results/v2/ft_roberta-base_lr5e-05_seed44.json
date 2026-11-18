@@ -1,0 +1,115 @@
+{
+  "model": "Fine-tuned roberta-base",
+  "dataset": "v2",
+  "seed": 44,
+  "hyperparameters": {
+    "pretrained_model": "roberta-base",
+    "lr": 5e-05,
+    "head_lr": 5e-05,
+    "attn_implementation": "eager",
+    "prior_bias_init": true,
+    "batch_size": 16,
+    "max_epochs": 10,
+    "patience": 2,
+    "max_length": 256,
+    "warmup_fraction": 0.1,
+    "weight_decay": 0.01,
+    "with_repo": false,
+    "loss": "BCEWithLogitsLoss",
+    "bf16_autocast": true,
+    "train_split": "train"
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.15351244234121764,
+      "val_f1_at_half": 0.4623636027371925,
+      "val_f1_tuned": 0.5042877560743211,
+      "threshold": 0.29,
+      "seconds": 30.08830213546753
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.14832149734594163,
+      "val_f1_at_half": 0.4628099173553719,
+      "val_f1_tuned": 0.5392872477458136,
+      "threshold": 0.28,
+      "seconds": 23.155189275741577
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.13541217313497855,
+      "val_f1_at_half": 0.5354509359047079,
+      "val_f1_tuned": 0.5977144510342832,
+      "threshold": 0.31,
+      "seconds": 26.784897089004517
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.12396559951262237,
+      "val_f1_at_half": 0.5762138386059888,
+      "val_f1_tuned": 0.5867370709737537,
+      "threshold": 0.43,
+      "seconds": 41.5733802318573
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.11497226414097919,
+      "val_f1_at_half": 0.5886965044103234,
+      "val_f1_tuned": 0.6026213881441763,
+      "threshold": 0.42,
+      "seconds": 41.63087773323059
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.10792517274011314,
+      "val_f1_at_half": 0.5830933423682874,
+      "val_f1_tuned": 0.6136521618239955,
+      "threshold": 0.32,
+      "seconds": 41.70375370979309
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.10134366111518031,
+      "val_f1_at_half": 0.5717259323503903,
+      "val_f1_tuned": 0.610998513714363,
+      "threshold": 0.27,
+      "seconds": 41.66474962234497
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.09580990069996717,
+      "val_f1_at_half": 0.5979480602757294,
+      "val_f1_tuned": 0.618654392852308,
+      "threshold": 0.33,
+      "seconds": 41.60440182685852
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.09182192914491326,
+      "val_f1_at_half": 0.5929783302536537,
+      "val_f1_tuned": 0.6198625522166824,
+      "threshold": 0.28,
+      "seconds": 41.66685223579407
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.08934428406651743,
+      "val_f1_at_half": 0.5988381742738589,
+      "val_f1_tuned": 0.6181257014590348,
+      "threshold": 0.32,
+      "seconds": 41.73308801651001
+    }
+  ],
+  "runtime_seconds": 389.5293459892273,
+  "device": "NVIDIA RTX 4000 Ada Generation",
+  "n_train": 2210,
+  "n_val": 246,
+  "n_test": 614,
+  "threshold": "default (0.5)",
+  "chosen_epoch": 10,
+  "val_micro_f1": 0.5988381742738589,
+  "precision": 0.6913106096975516,
+  "recall": 0.4766107678729038,
+  "micro_f1": 0.5642264742375759
+}

@@ -2,10 +2,10 @@
 
 80% train / 20% test, chosen uniformly at random with a fixed seed. A
 validation set (10% of the training portion) is carved from train for any
-tuning. The result is saved to data/split.csv (or data/split_corrected.csv
-for --dataset corrected), keyed by (Repo Name, PR #).
+tuning. The result is saved to data/split_v2.csv (or data/split.csv for
+--dataset v1), keyed by (Repo Name, PR #).
 
-Usage: python src/make_split.py [--dataset official|corrected]
+Usage: python src/make_split.py [--dataset v1|v2]
 """
 
 import argparse
@@ -21,7 +21,7 @@ VAL_FRACTION_OF_TRAIN = 0.1
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--dataset", choices=list(DATASETS), default="official")
+    parser.add_argument("--dataset", choices=list(DATASETS), default="v2")
     args = parser.parse_args()
 
     df = load_issues(args.dataset)

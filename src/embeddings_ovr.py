@@ -74,8 +74,8 @@ def main():
     parser.add_argument("--model", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
-                        help="labels as distributed, or with the repository join fixed")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2",
+                        help="v1: dataset as first distributed; v2: organizers' release with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 

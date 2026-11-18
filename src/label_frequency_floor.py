@@ -7,7 +7,7 @@ Each label's score is its frequency in the training split. Reported twice:
 
 Any real model should beat this.
 
-Usage: python src/label_frequency_floor.py [--dataset official|corrected]
+Usage: python src/label_frequency_floor.py [--dataset v1|v2]
 """
 
 import argparse
@@ -21,8 +21,8 @@ from evaluate import micro_metrics, save_result, tune_threshold
 
 def main():
     parser = argparse.ArgumentParser(description="Label-frequency sanity floor")
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
-                        help="labels as distributed, or with the repository join fixed")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2",
+                        help="v1: dataset as first distributed; v2: organizers' release with the repository join fixed")
     args = parser.parse_args()
 
     start = time.time()

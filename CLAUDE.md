@@ -16,7 +16,11 @@ skill labels (domains and sub-domains) apply.
 
 - Competition page: https://nlbse2027.github.io/tools/
 - Official repo (data + baseline): github.com/nlbse2027/skill-classification
-- Data: `skillscope_data.db` (SQLite), table `nlbse_tool_competition_data_by_issue`
+- Data: table `nlbse_tool_competition_data_by_issue` in two versions:
+  `data/skillscope_data_v2.db` (v2, main: organizers' release with the
+  PR-to-file join fixed to match on repository; 3,070 issues) and
+  `data/skillscope_data.db` (v1, as first distributed; labels depend only on
+  the PR number). Scripts take `--dataset v2` (default) or `--dataset v1`.
 - Label columns hold counts of matching APIs; a count above zero means the
   label is present.
 - Baseline: TF-IDF + Random Forest, in the `competition_baseline` folder.

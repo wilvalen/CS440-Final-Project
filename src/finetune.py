@@ -101,8 +101,8 @@ def main():
     parser.add_argument("--prior-bias-init", action="store_true",
                         help="initialise the output bias to each label's log-odds in the train split")
     parser.add_argument("--with-repo", action="store_true", help="prefix the input text with the repository name")
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
-                        help="labels as distributed, or with the repository join fixed")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2",
+                        help="v1: dataset as first distributed; v2: organizers' release with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 

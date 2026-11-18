@@ -1,0 +1,76 @@
+{
+  "model": "Frozen all-mpnet-base-v2 embeddings + one-vs-rest logistic regression",
+  "seed": 42,
+  "hyperparameters": {
+    "embedding_model": "sentence-transformers/all-mpnet-base-v2",
+    "normalize_embeddings": true,
+    "embedding_dim": 768,
+    "logreg_C_grid": [
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "val_search": [
+      {
+        "C": 0.01,
+        "val_f1_at_half": 0.6032958317422084,
+        "threshold": 0.33,
+        "val_f1_tuned": 0.6369828636982864
+      },
+      {
+        "C": 0.03,
+        "val_f1_at_half": 0.6025595659353621,
+        "threshold": 0.33,
+        "val_f1_tuned": 0.6375889890840057
+      },
+      {
+        "C": 0.1,
+        "val_f1_at_half": 0.599024041894787,
+        "threshold": 0.33,
+        "val_f1_tuned": 0.637038789025544
+      },
+      {
+        "C": 0.3,
+        "val_f1_at_half": 0.5923210959562579,
+        "threshold": 0.32,
+        "val_f1_tuned": 0.6351993293591655
+      },
+      {
+        "C": 1.0,
+        "val_f1_at_half": 0.5872455902306648,
+        "threshold": 0.32,
+        "val_f1_tuned": 0.6325687752292508
+      },
+      {
+        "C": 3.0,
+        "val_f1_at_half": 0.5833058198517274,
+        "threshold": 0.31,
+        "val_f1_tuned": 0.6269782848730218
+      },
+      {
+        "C": 10.0,
+        "val_f1_at_half": 0.5748809523809524,
+        "threshold": 0.3,
+        "val_f1_tuned": 0.6176357335386985
+      }
+    ],
+    "logreg_max_iter": 1000,
+    "train_split": "train"
+  },
+  "runtime_seconds": 37.799827575683594,
+  "encode_seconds_this_run": 0.5180950164794922,
+  "n_train": 5151,
+  "n_val": 572,
+  "n_test": 1431,
+  "threshold": "default (0.5)",
+  "chosen_C": 0.01,
+  "val_micro_f1": 0.6032958317422084,
+  "precision": 0.6894218116389612,
+  "recall": 0.5363866195858841,
+  "micro_f1": 0.6033514301158664,
+  "dataset": "v1"
+}

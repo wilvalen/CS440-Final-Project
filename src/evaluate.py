@@ -55,8 +55,8 @@ def tune_threshold_min_precision(y_val, val_scores, min_precision):
 
 
 def results_dir(dataset):
-    """results/ for the official labels, results/corrected/ for the corrected ones."""
-    return RESULTS_DIR if dataset == "official" else RESULTS_DIR / dataset
+    """results/v1/ or results/v2/."""
+    return RESULTS_DIR / dataset
 
 
 def predictions_dir(dataset):
@@ -75,7 +75,7 @@ def save_result(run_name, result, test_predictions=None, test_scores=None):
     test predictions (and optionally the test scores) are saved to
     <results dir>/predictions/<run_name>.npz for the per-label analysis.
     """
-    dataset = result.get("dataset", "official")
+    dataset = result["dataset"]
     out_dir = results_dir(dataset)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{run_name}.json"
@@ -90,7 +90,7 @@ def save_result(run_name, result, test_predictions=None, test_scores=None):
     write_summary(dataset)
 
 
-def write_summary(dataset="official"):
+def write_summary(dataset="v2"):
     """Rebuild <results dir>/summary.md as one table of every run JSON in that folder."""
     out_dir = results_dir(dataset)
     rows = []

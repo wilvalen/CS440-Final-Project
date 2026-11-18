@@ -25,7 +25,7 @@ Outputs (in report/, <name> = <dataset>_<variant>):
   per_label_summary_<name>.md      macro-F1, mean AUC and win/loss counts per model
   per_label_gain_<name>.png / .pdf F1 gain over "always" against label frequency
 
-Usage: python src/per_label_analysis.py [--dataset official|corrected] [--variant tuned|default]
+Usage: python src/per_label_analysis.py [--dataset v1|v2] [--variant tuned|default]
 """
 
 import argparse
@@ -51,7 +51,7 @@ COMMON_MODELS = [
     ("emb_all-MiniLM-L6-v2_ovr", "MiniLM + LR"),
     ("emb_all-mpnet-base-v2_ovr", "mpnet + LR"),
 ]
-CHOSEN_LR = {"official": "2e-05", "corrected": "5e-05"}
+CHOSEN_LR = {"v1": "2e-05", "v2": "5e-05"}
 
 
 def models_for(dataset):
@@ -90,8 +90,8 @@ def per_label_auc(y_true, scores, columns):
 def main():
     parser = argparse.ArgumentParser(description="Per-label F1 compared with the floor")
     parser.add_argument("--variant", choices=["tuned", "default"], default="tuned")
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
-                        help="labels as distributed, or with the repository join fixed")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2",
+                        help="v1: dataset as first distributed; v2: organizers' release with the repository join fixed")
     args = parser.parse_args()
 
     splits = load_split_data(args.dataset)

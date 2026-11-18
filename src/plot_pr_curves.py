@@ -9,7 +9,7 @@ Each curve uses the scores of the run's "_tuned" checkpoint. Operating points
 are read from the result JSON files; a run's default point can come from a
 different epoch than its tuned checkpoint, so it may sit slightly off the curve.
 
-Usage: python src/plot_pr_curves.py [--dataset official|corrected]
+Usage: python src/plot_pr_curves.py [--dataset v1|v2]
 Writes report/pr_curves_<dataset>.png and .pdf.
 """
 
@@ -35,12 +35,12 @@ GRID_COLOR = "#e4e3df"
 # Curves per dataset: (run name without suffix, legend name). The best model by
 # validation micro-F1 on each dataset, the baseline, and the floor.
 CURVES = {
-    "official": [
+    "v1": [
         ("ft_codebert-base_lr2e-05", "CodeBERT (fine-tuned)"),
         ("baseline_rf", "TF-IDF + RF (baseline)"),
         ("floor_label_frequency", "Label-frequency floor"),
     ],
-    "corrected": [
+    "v2": [
         ("ft_codebert-base_repo_lr5e-05", "CodeBERT + repo (fine-tuned)"),
         ("baseline_rf", "TF-IDF + RF (baseline)"),
         ("floor_label_frequency", "Label-frequency floor"),
@@ -52,7 +52,7 @@ POINTS = {"": "default", "_tuned": "tuned", "_minprec0.75": "precision ≥ 0.75 
 
 def main():
     parser = argparse.ArgumentParser(description="Micro precision-recall curves on test")
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="corrected")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2")
     args = parser.parse_args()
 
     y_test = binary_labels(load_split_data(args.dataset)["test"])

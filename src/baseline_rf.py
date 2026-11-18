@@ -74,8 +74,8 @@ def positive_probabilities(classifier, x):
 def main():
     parser = argparse.ArgumentParser(description="TF-IDF + Random Forest baseline")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--dataset", choices=["official", "corrected"], default="official",
-                        help="labels as distributed, or with the repository join fixed")
+    parser.add_argument("--dataset", choices=["v1", "v2"], default="v2",
+                        help="v1: dataset as first distributed; v2: organizers' release with the repository join fixed")
     parser.add_argument("--sample", type=int, help="use only this many rows of each split")
     args = parser.parse_args()
 

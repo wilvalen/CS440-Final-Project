@@ -25,83 +25,89 @@ Fine-tuning was run on an NVIDIA RTX 4000 Ada (20 GB). Everything else runs on C
 
 ## Data
 
-The database (441 MB) is not committed. Download it from the official
-Hugging Face dataset (checksum is verified):
+Two versions of the competition database are used. Neither is committed.
+
+**v2 (main dataset):** the organizers' release with the label query fixed,
+`skillscope_data_v2.db` (846 MB), received from the course instructor. Place it
+(or a symlink to it) at `data/skillscope_data_v2.db`. Its competition table has
+3,070 issues.
+
+**v1:** the dataset as first distributed (441 MB, 7,154 issues). Download it
+from the official Hugging Face dataset (checksum is verified):
 
 ```console
 python src/download_data.py      # -> data/skillscope_data.db
 ```
 
-### Repository-matched labels ("corrected" dataset)
+Every script takes `--dataset v2` (default) or `--dataset v1`.
 
-We found an issue in how the official labels are generated. The view that
-builds them (`vw_classification_helper`) joins pull requests to their changed
-files on the PR number only (`a.pullNumber = b.pullNumber`), without matching
-the repository. PR numbers repeat across the 12 repositories, so each issue
-receives the changed files, and therefore the labels, of every repository's
-PR with the same number. As a result, all issues sharing a PR number have
-identical label vectors (980 distinct vectors for 7,154 issues), and the
-labels do not depend on the issue's own content.
+### The difference between v1 and v2
 
-We checked this in several ways: rebuilding the labels from the raw tables
-without the repository match reproduces the official label counts exactly for
-all 7,154 issues; every changed-file row's commit belongs to a PR in its own
-repository; and GitHub's record of the PRs agrees with the per-repository
-files in the database.
+In v1, the view that builds the labels (`vw_classification_helper`) joins
+pull requests to their changed files on the PR number only
+(`a.pullNumber = b.pullNumber`), without matching the repository. PR numbers
+repeat across the 12 repositories, so each issue received the changed files,
+and therefore the labels, of every repository's PR with the same number. All
+v1 issues sharing a PR number have identical label vectors (980 distinct
+vectors for 7,154 issues), and the labels do not depend on the issue's own
+content. v2 adds the repository match; only PRs with at least one labelled
+API in their own changed files remain (3,070 issues; kafka has almost no
+recorded files and drops out).
 
-`src/build_corrected_labels.py` reruns the official view definitions with one
-added condition, `AND a.repoNum = b.repoNum`, and writes
-`data/skillscope_corrected.db` (same table name and columns; the official
-database is opened read-only). Only PRs with at least one labelled API in
-their own changed files remain: 3,070 issues (kafka has almost no recorded
-files and drops out).
+We checked the v1 behaviour in several ways: rebuilding the labels from the
+raw tables without the repository match reproduces the v1 label counts
+exactly for all 7,154 issues; every changed-file row's commit belongs to a PR
+in its own repository; and GitHub's record of the PRs agrees with the
+per-repository files in the database.
 
-A smaller, separate issue is left unchanged in both datasets: the view's
-"Operating System" columns test `d.domain = 'Operating System)'` (with a
-trailing parenthesis), so those 7 labels are always 0 even though 73 APIs
-have the domain "Operating System".
+`src/rebuild_v2_from_v1.py` reruns the v1 view definitions with one added
+condition, `AND a.repoNum = b.repoNum`, writes
+`data/skillscope_data_v2_rebuilt.db`, and checks it against the organizers'
+v2 table: they are identical (same rows, order, text and labels). Without
+the organizers' file, the rebuilt database can be copied to
+`data/skillscope_data_v2.db` and used in its place.
 
 ```console
-python src/build_corrected_labels.py   # -> data/skillscope_corrected.db (~15 s)
+python src/rebuild_v2_from_v1.py   # ~15 s; prints "Identical to the organizers' v2 table (3070 issues): True"
 ```
 
-Every script takes `--dataset official` (default) or `--dataset corrected`.
+A smaller issue remains in both versions: the views' "Operating System"
+columns test `d.domain = 'Operating System)'` (with a trailing parenthesis),
+so those 7 labels are always 0 even though 73 APIs have the domain
+"Operating System".
 
 ## Split
 
-The competition does not provide a train/test split, so we make one:
-a seeded random 80/20 train/test split, with 10% of the training portion
-held out as validation for tuning. The split files are committed. To
+The competition does not provide a train/test split, so we make one per
+dataset: a seeded random 80/20 train/test split, with 10% of the training
+portion held out as validation for tuning. The split files are committed. To
 regenerate them (same output for the same seed):
 
 ```console
-python src/make_split.py                        # data/split.csv: train 5151, val 572, test 1431
-python src/make_split.py --dataset corrected    # data/split_corrected.csv: train 2210, val 246, test 614
+python src/make_split.py                   # data/split_v2.csv: train 2210, val 246, test 614
+python src/make_split.py --dataset v1      # data/split.csv:    train 5151, val 572, test 1431
 ```
 
 ## Runs
+
+Commands for v2 (the default). Add `--dataset v1` to run on v1; the
+learning rates chosen on validation differ (see *Fine-tuning notes*).
 
 | step | command |
 |---|---|
 | Sanity floor: same labels for every issue, by training frequency | `python src/label_frequency_floor.py` |
 | Baseline: TF-IDF + Random Forest | `python src/baseline_rf.py` |
-| Frozen sentence embeddings + one-vs-rest logistic regression | `python src/embeddings_ovr.py` (`--model` picks the encoder; default `all-MiniLM-L6-v2`) |
+| Frozen sentence embeddings + one-vs-rest logistic regression | `python src/embeddings_ovr.py` and `--model sentence-transformers/all-mpnet-base-v2` |
 | Fine-tuned encoder (general), lr candidates | `python src/finetune.py --model roberta-base --prior-bias-init --lr 2e-5` and `--lr 5e-5` |
-| Fine-tuned encoder (code-aware) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5` |
-| Fine-tuned encoder, text + repo name | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 2e-5 --with-repo` |
-| Per-label F1 and AUC against always-predicting each label (after the runs above) | `python src/per_label_analysis.py` (writes to `report/`) |
-| Precision-constrained threshold (best val F1 with val precision ≥ 0.75, target fixed in advance as the baseline's default precision 0.726 plus a margin) | `python src/finetune.py --dataset corrected --model microsoft/codebert-base --prior-bias-init --lr 5e-5 --with-repo --min-precision 0.75` |
-| Precision-recall curves on test with each run's operating points | `python src/plot_pr_curves.py --dataset corrected` (and `--dataset official`) |
+| Fine-tuned encoder (code-aware) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 5e-5` |
+| Fine-tuned encoder, text + repo name, plus a precision-constrained threshold (best val F1 with val precision ≥ 0.75; target fixed in advance as the baseline's default precision 0.726 plus a margin) | `python src/finetune.py --model microsoft/codebert-base --prior-bias-init --lr 5e-5 --with-repo --min-precision 0.75` |
+| Seeds 43 and 44 | add `--seed 43` / `--seed 44` to the RF and fine-tuning commands |
+| Per-label F1 and AUC against always-predicting each label | `python src/per_label_analysis.py` (writes to `report/`) |
+| Precision-recall curves on test with each run's operating points | `python src/plot_pr_curves.py` (writes to `report/`) |
 
-On the corrected labels, validation chose lr 5e-5 for RoBERTa (over 2e-5) and
-CodeBERT over RoBERTa, so the corrected CodeBERT runs use `--lr 5e-5`:
-`python src/finetune.py --dataset corrected --model microsoft/codebert-base --prior-bias-init --lr 5e-5`
-(add `--with-repo` for the repo row).
-
-Each run writes `results/<run>.json` and rebuilds `results/summary.md`
-(with `--dataset corrected`: `results/corrected/`). Runs with a seed other
-than 42 get a `_seed<N>` suffix, and the summary adds a mean ± standard
-deviation table for runs repeated over seeds.
+Each run writes `results/<dataset>/<run>.json` and rebuilds that folder's
+`summary.md`. Runs with a seed other than 42 get a `_seed<N>` suffix, and the
+summary adds a mean ± standard deviation table for runs repeated over seeds.
 Each command reports two runs: the model's default decision rule, and a
 `_tuned` run that uses one probability threshold for all labels, chosen to
 maximise micro-F1 on the validation split (grid 0.01 to 0.99). The test
@@ -152,11 +158,12 @@ training split, so the model starts at the label-frequency floor. Without it,
 at lr 2e-5 the model spent its whole run learning the label frequencies and
 never got past them (log in `report/ft_roberta_lr2e-5_collapsed.log`).
 
-Learning rate was chosen on validation: roberta-base at 2e-5 and 5e-5, the
-better (2e-5) reused for codebert-base. The `--with-repo` run uses whichever
-of the two models had the higher validation micro-F1 (codebert-base).
-Result files are named `ft_<model>[_repo]_lr<lr>[_tuned].json`.
+Learning rate was chosen on validation: roberta-base at 2e-5 and 5e-5, and
+the better one reused for codebert-base (v2: 5e-5; v1: 2e-5). The
+`--with-repo` run uses whichever of the two models had the higher validation
+micro-F1 (codebert-base on both datasets). Result files are named
+`ft_<model>[_repo]_lr<lr>[_seed<N>][_tuned|_minprec<P>].json`.
 
-Runs took 4–11 minutes each on an RTX 4000 Ada shared with another job
+Runs took 4–11 minutes each (v1) and 4–7 minutes (v2) on an RTX 4000 Ada shared with another job
 (50–100 s per epoch). Seeds and deterministic CUDA settings are set, so reruns
 on the same GPU and software give the same numbers.

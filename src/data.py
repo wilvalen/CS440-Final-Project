@@ -1,9 +1,10 @@
 """Loading the competition table, its inputs, its labels, and our fixed split.
 
 Two datasets share the same table layout:
-- "official":  data/skillscope_data.db as distributed by the competition
-- "corrected": data/skillscope_corrected.db, built by src/build_corrected_labels.py
-  (labels recomputed with the PR-to-file join fixed to match on repository)
+- "v1": data/skillscope_data.db, the dataset as first distributed. Its label
+  query joins PRs to changed files without matching the repository.
+- "v2": data/skillscope_data_v2.db, the organizers' release with that join fixed.
+  src/rebuild_v2_from_v1.py recreates its competition table from v1 exactly.
 """
 
 import sqlite3
@@ -14,11 +15,12 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "skillscope_data.db"
 SPLIT_PATH = ROOT / "data" / "split.csv"
-CORRECTED_DB_PATH = ROOT / "data" / "skillscope_corrected.db"
-CORRECTED_SPLIT_PATH = ROOT / "data" / "split_corrected.csv"
+V2_DB_PATH = ROOT / "data" / "skillscope_data_v2.db"
+V2_SPLIT_PATH = ROOT / "data" / "split_v2.csv"
+REBUILT_V2_DB_PATH = ROOT / "data" / "skillscope_data_v2_rebuilt.db"
 DATASETS = {
-    "official": (DB_PATH, SPLIT_PATH),
-    "corrected": (CORRECTED_DB_PATH, CORRECTED_SPLIT_PATH),
+    "v1": (DB_PATH, SPLIT_PATH),
+    "v2": (V2_DB_PATH, V2_SPLIT_PATH),
 }
 TABLE = "nlbse_tool_competition_data_by_issue"
 
@@ -39,7 +41,7 @@ KEY_COLUMNS = ["Repo Name", "PR #"]
 N_LABELS = 217
 
 
-def load_issues(dataset="official"):
+def load_issues(dataset="v2"):
     """Return the full competition table of one dataset as a DataFrame."""
     db_path = DATASETS[dataset][0]
     with sqlite3.connect(db_path) as connection:
@@ -67,7 +69,7 @@ def issue_text(df):
     return (df["issue text"].fillna("") + " " + df["issue description"].fillna("")).tolist()
 
 
-def load_split_data(dataset="official"):
+def load_split_data(dataset="v2"):
     """Return {"train": df, "val": df, "test": df} using the dataset's saved split file."""
     df = load_issues(dataset)
     split = pd.read_csv(DATASETS[dataset][1])
