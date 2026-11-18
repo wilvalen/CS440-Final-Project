@@ -104,6 +104,7 @@ learning rates chosen on validation differ (see *Fine-tuning notes*).
 | Seeds 43 and 44 | add `--seed 43` / `--seed 44` to the RF and fine-tuning commands |
 | Per-label F1 and AUC against always-predicting each label | `python src/per_label_analysis.py` (writes to `report/`) |
 | Precision-recall curves on test with each run's operating points | `python src/plot_pr_curves.py` (writes to `report/`) |
+| Report tables (Markdown and LaTeX) and training-curve figure, from the results above | `python src/make_report_assets.py` (writes to `report/`) |
 
 Each run writes `results/<dataset>/<run>.json` and rebuilds that folder's
 `summary.md`. Runs with a seed other than 42 get a `_seed<N>` suffix, and the

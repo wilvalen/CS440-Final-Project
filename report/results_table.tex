@@ -1,0 +1,31 @@
+\begin{table*}[t]
+\centering
+\caption{Test-set results, micro-averaged over 217 labels. Default: the model's own decision rule (0.5, or the Random Forest's vote); tuned: one threshold chosen on validation. F1 is mean$\pm$std over three seeds where marked by $n$=3.}
+\label{tab:results}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{3}{c}{Default threshold} & \multicolumn{3}{c}{Tuned threshold} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Data & Model & P & R & F1 & P & R & F1 \\
+\midrule
+v1 & Label-frequency floor & 0.690 & 0.536 & 0.603 & 0.576 & 0.706 & 0.634 \\
+v1 & TF-IDF + Random Forest (baseline) ($n$=3) & 0.688 & 0.485 & 0.569$\pm$0.001 & 0.555 & 0.706 & 0.621$\pm$0.001 \\
+v1 & MiniLM embeddings + LR & 0.689 & 0.537 & 0.604 & 0.579 & 0.700 & 0.634 \\
+v1 & mpnet embeddings + LR & 0.689 & 0.536 & 0.603 & 0.581 & 0.698 & 0.634 \\
+v1 & RoBERTa, fine-tuned & 0.683 & 0.549 & 0.609 & 0.570 & 0.717 & 0.635 \\
+v1 & CodeBERT, fine-tuned & 0.680 & 0.554 & 0.611 & 0.580 & 0.701 & 0.635 \\
+v1 & CodeBERT + repo name, fine-tuned & 0.682 & 0.556 & 0.612 & 0.581 & 0.700 & 0.635 \\
+\midrule
+v2 & Label-frequency floor & 0.701 & 0.238 & 0.355 & 0.492 & 0.433 & 0.461 \\
+v2 & TF-IDF + Random Forest (baseline) ($n$=3) & 0.728 & 0.310 & 0.435$\pm$0.004 & 0.589 & 0.509 & 0.546$\pm$0.002 \\
+v2 & MiniLM embeddings + LR & 0.658 & 0.461 & 0.542 & 0.614 & 0.552 & 0.582 \\
+v2 & mpnet embeddings + LR & 0.675 & 0.477 & 0.559 & 0.643 & 0.548 & 0.592 \\
+v2 & RoBERTa, fine-tuned ($n$=3) & 0.676 & 0.491 & 0.568$\pm$0.004 & 0.605 & 0.587 & 0.595$\pm$0.007 \\
+v2 & CodeBERT, fine-tuned ($n$=3) & 0.686 & 0.520 & 0.592$\pm$0.005 & 0.633 & 0.600 & 0.616$\pm$0.005 \\
+v2 & CodeBERT + repo name, fine-tuned ($n$=3) & 0.703 & 0.569 & 0.629$\pm$0.008 & 0.640 & 0.661 & 0.650$\pm$0.005 \\
+v2 & CodeBERT + repo, val precision $\geq$ 0.75 ($n$=3) & 0.758 & 0.464 & 0.575$\pm$0.009 & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
