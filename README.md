@@ -8,6 +8,44 @@ Multi-label classification of GitHub pull requests into 217 skill labels
 Models use only the PR title (`issue text`) and description (`issue description`)
 as input. Metrics are micro-averaged precision, recall and F1 over all 217 labels.
 
+## Findings
+
+Test-set results, micro-averaged over 217 labels. "Tuned" uses one decision
+threshold chosen on the validation split. v2 numbers are mean ± standard
+deviation over seeds 42–44 where marked (n=3). Full tables:
+`report/results_table.md`, `results/v1/summary.md`, `results/v2/summary.md`.
+
+**v2 (organizers' corrected release, main dataset):**
+
+| model (tuned threshold) | precision | recall | micro-F1 |
+|---|---|---|---|
+| Label-frequency floor (no text) | 0.492 | 0.433 | 0.461 |
+| TF-IDF + Random Forest baseline (n=3) | 0.589 | 0.509 | 0.546 ± 0.002 |
+| Frozen mpnet embeddings + logistic regression | 0.643 | 0.548 | 0.592 |
+| Fine-tuned RoBERTa (n=3) | 0.605 | 0.587 | 0.595 ± 0.007 |
+| Fine-tuned CodeBERT (n=3) | 0.633 | 0.600 | 0.616 ± 0.005 |
+| **Fine-tuned CodeBERT + repository name (n=3)** | **0.640** | **0.661** | **0.650 ± 0.005** |
+
+- The best model, fine-tuned CodeBERT with the repository name, improves
+  micro-F1 by 10.4 points over the baseline and beats it on precision,
+  recall and F1 at both of the baseline's operating points:
+  - tuned vs tuned: 0.640 / 0.661 / 0.650 vs 0.589 / 0.509 / 0.546;
+  - against the baseline's default (high-precision) point, 0.728 / 0.310 /
+    0.435, a threshold chosen on validation for precision ≥ 0.75 gives
+    0.758 / 0.464 / 0.575 (n=3).
+- Its precision-recall curve lies above the baseline's at every recall
+  (`report/pr_curves_v2.pdf`).
+- Code-aware pre-training helps (CodeBERT +2.1 points over RoBERTa), and so
+  does the repository name (+3.4). Fine-tuning a general model (RoBERTa) did
+  not beat frozen sentence embeddings.
+
+**v1 (dataset as first distributed):** no model beats the text-free
+label-frequency floor (tuned micro-F1 0.634; fine-tuned models 0.635,
+baseline 0.621), and per-label ROC-AUC is about 0.51 for every model. The v1
+labels depend only on the PR number (see *The difference between v1 and v2*),
+so they cannot be predicted from an issue's text. Training curves:
+`report/training_curves.pdf`.
+
 ## Install
 
 Python 3.11.
